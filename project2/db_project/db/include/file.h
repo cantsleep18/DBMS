@@ -25,9 +25,6 @@ typedef struct free_t {
 	char reserved[4088];
 }free_t;
 
-// Extend db_size in file_alloc_page
-void extend_db_size(header_t* root);
-
 // Open existing database file or create on if not existed
 int file_open_database_file(const char* pathname);
 

@@ -27,7 +27,6 @@ TEST(FileInitTest, HandlesInitialization) {
 
   // Check if the file is opened
   ASSERT_TRUE(fd > 0);  // change the condition to your design's behavior
-  EXPECT_EQ(fd, 3);
 
   // Check the size of the initial file
   file_read_page(fd, 0 ,(page_t*)&header);
@@ -42,8 +41,7 @@ TEST(FileInitTest, HandlesInitialization) {
   
 
   // Allocate the pages
-  /*
-  EXPECT_EQ(fd, 3);
+  
   allocated_page = file_alloc_page(fd);
   EXPECT_EQ(allocated_page,1);
 
@@ -64,7 +62,7 @@ TEST(FileInitTest, HandlesInitialization) {
   file_free_page(fd, allocated_page2);
   file_read_page(fd, 0, (page_t*)&header);
   EXPECT_EQ(header.first_free_page, 2);
-  */
+  
 
   // to test extend_func
   pagenum_t tmp2 = 0;
@@ -82,7 +80,7 @@ TEST(FileInitTest, HandlesInitialization) {
   EXPECT_EQ(header.first_free_page,0);
   EXPECT_EQ(header.page_num, 2560);
 
-  // // extend
+  // extend
   tmp2 = file_alloc_page(fd);
   file_read_page(fd, 0, (page_t*)&header);
   EXPECT_EQ(tmp2, 2560);
@@ -142,13 +140,7 @@ class FileTest : public ::testing::Test {
  *    and check the existence/absence of the freed/allocated page
  */
 TEST_F(FileTest, HandlesPageAllocation) {
-  // pagenum_t allocated_page, freed_page;
-  // header_t header;
-  // // Allocate the pages
-  // allocated_page = file_alloc_page(fd);
-  // EXPECT_TRUE(fd >=0);
-  // freed_page = file_alloc_page(fd);
-  // EXPECT_EQ(allocated_page, freed_page );
+
 
   // Free one page
   // file_free_page(fd, freed_page);
