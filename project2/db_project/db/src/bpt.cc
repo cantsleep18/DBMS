@@ -38,19 +38,19 @@ int db_find(int64_t table_id, int64_t key, char *ret_val, uint16_t *val_size){
     leaf_page_num = find_leaf(table_id, key, header.root_page_num);
     file_read_page(table_id, leaf_page_num, (page_t*)&leaf);
     
-    for(int i=0; i<leaf.num_of_keys; i++){
-        printf("db.key: %d\n", leaf.record[i].key);
-    }
+    // for(int i=0; i<leaf.num_of_keys; i++){
+    //     printf("db.key: %d\n", leaf.record[i].key);
+    // }
 
     for(int i = 0; i<leaf.num_of_keys;i++){
         if(leaf.record[i].key == key){
             memcpy(ret_val, leaf.record[i].value, 112); // check problem
             *val_size = leaf.record[i].size;
-            printf("found key: %d",(int)key);
+            // printf("found key: %d",(int)key);
             return 0;
         }
     }
-    printf("couldn't find\n");
+    // printf("couldn't find\n");
     return -1;  
 }
 
@@ -89,15 +89,15 @@ int db_insert(int64_t table_id, int64_t key, char *value, uint16_t val_size){
     leaf_t leaf;
     pagenum_t leaf_page_num;
     
-    printf("key: %d\n",(int)key);
+    // printf("key: %d\n",(int)key);
     if(db_find(table_id, key, insert_value, &val_size) == 0){
-        printf("insert_find");
+        // printf("insert_find");
         free(insert_value);
         return -1;
     }
 
     file_read_page(table_id, 0, (page_t*)&header);
-    printf("rootpagenum: %d\n", (int)header.root_page_num);
+    // printf("rootpagenum: %d\n", (int)header.root_page_num);
     if(header.root_page_num == 0){
         start_new_tree(table_id, key, value, val_size);
         free(insert_value);
@@ -110,7 +110,7 @@ int db_insert(int64_t table_id, int64_t key, char *value, uint16_t val_size){
     // printf("leaf_num: %d", leaf_page_num);
     file_read_page(table_id, leaf_page_num, (page_t*)&leaf);
 
-    printf("%d\n",leaf.num_of_keys);
+    // printf("%d\n",leaf.num_of_keys);
     if(leaf.num_of_keys < leaf_order ){
         insert_into_leaf(table_id, leaf_page_num, key, value, val_size);
         free(insert_value);
@@ -125,7 +125,7 @@ void start_new_tree(uint64_t table_id, int64_t key, char *value, uint16_t val_si
     header_t header;
     leaf_t root;
     pagenum_t root_num;
-    printf("start_new_tree---------\n"); 
+    // printf("start_new_tree---------\n"); 
     root_num = file_alloc_page(table_id);
     file_read_page(table_id, root_num, (page_t*)&root);
     file_read_page(table_id, 0, (page_t*)&header);
@@ -148,7 +148,7 @@ void start_new_tree(uint64_t table_id, int64_t key, char *value, uint16_t val_si
 void insert_into_leaf(uint64_t table_id ,pagenum_t leaf_page_num, uint64_t key, char *value, uint16_t val_size){
     leaf_t leaf;
     int insertion_point = 0;
-    printf("insert_into_leaf---------\n");
+    // printf("insert_into_leaf---------\n");
     int i;
 
     file_read_page(table_id, leaf_page_num, (page_t*)&leaf);
@@ -178,7 +178,7 @@ int insert_into_leaf_after_splitting(uint64_t table_id ,pagenum_t leaf_page_num,
     leaf_t leaf;
     leaf_t tmp;
     leaf_t new_leaf;
-    printf("insert_into_leaf_after_splitting---------\n");
+    // printf("insert_into_leaf_after_splitting---------\n");
     pagenum_t new_leaf_page_num = file_alloc_page(table_id);
 
     file_read_page(table_id, new_leaf_page_num, (page_t*)&new_leaf);
@@ -242,7 +242,7 @@ int insert_into_leaf_after_splitting(uint64_t table_id ,pagenum_t leaf_page_num,
 
 int insert_into_parent(uint64_t table_id, uint64_t key,pagenum_t leaf_page_num, pagenum_t new_leaf_page_num){
     uint64_t left_index;
-    printf("insert_into_parent---------\n"); // check option
+    // printf("insert_into_parent---------\n"); // check option
     internal_t parent;
     leaf_t leaf;
     
@@ -251,21 +251,20 @@ int insert_into_parent(uint64_t table_id, uint64_t key,pagenum_t leaf_page_num, 
 
     file_read_page(table_id, leaf_page_num, (page_t*)&leaf);
     parent_page_num = leaf.parent_page_num;
-    printf("insert_into_parent---------first\n"); // check option
-    printf("parentpage: %d\n",parent_page_num);
+    // printf("insert_into_parent---------first\n"); // check option
+    // printf("parentpage: %d\n",parent_page_num);
     if(parent_page_num == 0)
         return insert_into_new_root(table_id, key, leaf_page_num, new_leaf_page_num);
     
-    printf("insert_into_parent---------second \n"); // check option
+    // printf("insert_into_parent---------second \n"); // check option
     left_index = get_left_index(table_id, parent_page_num, leaf_page_num);
-    printf("left_index: %d\n",left_index);
+    // printf("left_index: %d\n",left_index);
     file_read_page(table_id, parent_page_num, (page_t*)&parent);
     
     if(parent.num_of_keys < inter_order-1){
-        printf("parent.num_of_keys: %d\n",parent.num_of_keys);
+        // printf("parent.num_of_keys: %d\n",parent.num_of_keys);
         return insert_into_node(table_id, key, leaf_page_num, new_leaf_page_num, left_index);
     }
-    printf("You are over 247!!!!-------------\n");
     return insert_into_node_after_splitting(table_id, key, leaf_page_num, new_leaf_page_num, left_index);
 }
 
@@ -273,7 +272,7 @@ int insert_into_new_root(uint64_t table_id, uint64_t key, pagenum_t leaf_page_nu
     header_t header;
     internal_t root;
     leaf_t left, right;
-    printf("insert_into_new_root---------\n"); // check option
+    // printf("insert_into_new_root---------\n"); // check option
     pagenum_t root_page_num = file_alloc_page(table_id);
     
     file_read_page(table_id, root_page_num, (page_t*)&root);
@@ -298,7 +297,7 @@ int insert_into_new_root(uint64_t table_id, uint64_t key, pagenum_t leaf_page_nu
     file_read_page(table_id, 0, (page_t*)&header);
     header.root_page_num = root_page_num;
     file_write_page(table_id, 0, (page_t*)&header);
-    printf("rootpage created: %ld\n", root_page_num);
+    // printf("rootpage created: %ld\n", root_page_num);
     return 0;
 }
 
@@ -308,7 +307,7 @@ int insert_into_node(uint64_t table_id, uint64_t key, pagenum_t left_page_num,
     internal_t left;
     pagenum_t parent_page_num;
 
-    printf("Insert_into_node---------\n");
+    // printf("Insert_into_node---------\n");
 
     file_read_page(table_id, left_page_num, (page_t*)&left);
     parent_page_num = left.parent_page_num;
@@ -332,15 +331,8 @@ int insert_into_node(uint64_t table_id, uint64_t key, pagenum_t left_page_num,
 int insert_into_node_after_splitting(uint64_t table_id, uint64_t key,pagenum_t left_page_num,
                                         pagenum_t new_right_page_num, uint64_t left_index){
     
-    printf("Insert_into_node_after_splitting---------\n");
-    printf("Insert_into_node_after_splitting---------\n");
-    printf("Insert_into_node_after_splitting---------\n");
-    printf("Insert_into_node_after_splitting---------\n");
-    printf("Insert_into_node_after_splitting---------\n");
-    printf("Insert_into_node_after_splitting---------\n");
-    printf("Insert_into_node_after_splitting---------\n");
-    printf("Insert_into_node_after_splitting---------\n");
-    printf("Insert_into_node_after_splitting---------\n");
+    // printf("Insert_into_node_after_splitting---------\n");
+
     int i, j;
     internal_t old_node, new_node, tmp,left;
     pagenum_t old_node_page_num, new_node_page_num;
@@ -366,7 +358,7 @@ int insert_into_node_after_splitting(uint64_t table_id, uint64_t key,pagenum_t l
 
     file_read_page(table_id, new_node_page_num, (page_t*)&new_node);
     new_node.is_leaf = 0;
-    new_node.left_page_num = tmp.record[split].key_page_num;//?
+    new_node.left_page_num = tmp.record[split].key_page_num;
     new_node.num_of_keys = 0;
     new_node.parent_page_num = old_node.parent_page_num;
 
@@ -399,7 +391,6 @@ int insert_into_node_after_splitting(uint64_t table_id, uint64_t key,pagenum_t l
         tmp_page.parent_page_num = new_node_page_num;
         file_write_page(table_id, new_node.left_page_num, (page_t*)&tmp_page);
     
-    printf("I want to sleep\n");
     return insert_into_parent(table_id, k_prime, old_node_page_num, new_node_page_num);
 }
 
