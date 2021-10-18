@@ -11,6 +11,8 @@ set(DB_SOURCES
 set(DB_HEADER_DIR include)
 set(DB_HEADERS
   ${DB_HEADER_DIR}/bpt.h
+  ${DB_HEADER_DIR}/page.h
+  
   ${DB_HEADER_DIR}/file.h
   # Add your headers here
   # ${DB_HEADER_DIR}/foo/bar/your_header.h

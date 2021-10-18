@@ -1,8 +1,6 @@
 #ifndef __BPT_H__
 #define __BPT_H__
 
-// Uncomment the line below if you are compiling on Windows.
-// #define WINDOWS
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -11,6 +9,8 @@
 #define false 0
 #define true 1
 #endif
+
+#include "file.h"
 
 // Default order is 4.
 #define DEFAULT_ORDER 4
@@ -21,6 +21,8 @@
 #define MAX_ORDER 20
 
 // Constants for printing part or all of the GPL license.
+
+
 #define LICENSE_FILE "LICENSE.txt"
 #define LICENSE_WARRANTEE 0
 #define LICENSE_WARRANTEE_START 592
@@ -41,9 +43,9 @@
  * to change the type and content
  * of the value field.
  */
-typedef struct record {
-    int value;
-} record;
+// typedef struct record {
+//     int value;
+// } record;
 
 /* Type representing a node in the B+ tree.
  * This type is general enough to serve for both
@@ -73,14 +75,14 @@ typedef struct record {
  * to data is always num_keys.  The
  * last leaf pointer points to the next leaf.
  */
-typedef struct node {
-    void ** pointers;
-    int * keys;
-    struct node * parent;
-    bool is_leaf;
-    int num_keys;
-    struct node * next; // Used for queue.
-} node;
+// typedef struct node {
+//     void ** pointers;
+//     int * keys;
+//     struct node * parent;
+//     bool is_leaf;
+//     int num_keys;
+//     struct node * next; // Used for queue.
+// } node;
 
 // GLOBALS.
 
@@ -101,71 +103,49 @@ extern int order;
  * printing each entire rank on a separate
  * line, finishing with the leaves.
  */
-extern node * queue;
+// extern node * queue;
 
 /* The user can toggle on and off the "verbose"
  * property, which causes the pointer addresses
  * to be printed out in hexadecimal notation
  * next to their corresponding keys.
  */
-extern bool verbose_output;
+// extern bool verbose_output;
 
+// DB
+int init_db();
+int64_t open_table(char *pathname);
+int db_insert(int64_t table_id, int64_t key, char *value, uint16_t val_size);
+int db_find(int64_t table_id, int64_t key, char *ret_val, uint16_t *val_size);
+int db_delete(int64_t table_id, int64_t key);
+int shutdown_db();
 
 // FUNCTION PROTOTYPES.
+pagenum_t find_leaf(uint64_t table_id, int64_t key, pagenum_t root_page_num);
+void start_new_tree(uint64_t table_id, int64_t key, char *value, uint16_t val_size);
+void insert_into_leaf(uint64_t table_id ,pagenum_t leaf_page_num, uint64_t key, char *value, uint16_t val_size);
+int insert_into_leaf_after_splitting(uint64_t table_id ,pagenum_t leaf_page_num, uint64_t key, char *value, uint16_t val_size);
+int insert_into_parent(uint64_t table_id, uint64_t key,pagenum_t leaf_page_num, pagenum_t new_leaf_page_num);
+int insert_into_new_root(uint64_t table_id, uint64_t key, pagenum_t leaf_page_num, pagenum_t new_leaf_page_num);
+int insert_into_node(uint64_t table_id, uint64_t key, pagenum_t left_page_num, 
+                        pagenum_t new_right_page_num, uint64_t left_index);
+int insert_into_node_after_splitting(uint64_t table_id, uint64_t key, pagenum_t left_page_num, 
+                        pagenum_t new_right_page_num, uint64_t left_index);
 
-// Output and utility.
+int db_delete(int64_t table_id, int64_t key);
+int delete_entry(uint64_t table_id, pagenum_t root_page_num, pagenum_t key_page_num, uint64_t key);
+void remove_entry_from_node(int64_t table_id, pagenum_t key_page_num, uint64_t key);
+void adjust_root(uint64_t table_id,pagenum_t root_page_num);
+int get_neighbor_index(uint64_t table_id, pagenum_t key_page_num);
+void coalesce_nodes(uint64_t table_id,pagenum_t root_page_num,pagenum_t key_page_num, 
+                    pagenum_t neighbor_page_num,pagenum_t neighbor_index,
+                    pagenum_t k_prime,uint64_t key);
+void redistribute_nodes(uint64_t table_id,pagenum_t root_page_num,pagenum_t key_page_num,pagenum_t neighbor_page_num, 
+                                        pagenum_t neighbor_index,pagenum_t k_prime_index,pagenum_t k_prime);
+ 
 
-void license_notice( void );
-void print_license( int licence_part );
-void usage_1( void );
-void usage_2( void );
-void usage_3( void );
-void enqueue( node * new_node );
-node * dequeue( void );
-int height( node * root );
-int path_to_root( node * root, node * child );
-void print_leaves( node * root );
-void print_tree( node * root );
-void find_and_print(node * root, int key, bool verbose); 
-void find_and_print_range(node * root, int range1, int range2, bool verbose); 
-int find_range( node * root, int key_start, int key_end, bool verbose,
-        int returned_keys[], void * returned_pointers[]); 
-node * find_leaf( node * root, int key, bool verbose );
-record * find( node * root, int key, bool verbose );
+//util
 int cut( int length );
+uint64_t get_left_index(uint64_t table_id, pagenum_t parent_page_num, pagenum_t left_page_num);
 
-// Insertion.
-
-record * make_record(int value);
-node * make_node( void );
-node * make_leaf( void );
-int get_left_index(node * parent, node * left);
-node * insert_into_leaf( node * leaf, int key, record * pointer );
-node * insert_into_leaf_after_splitting(node * root, node * leaf, int key,
-                                        record * pointer);
-node * insert_into_node(node * root, node * parent, 
-        int left_index, int key, node * right);
-node * insert_into_node_after_splitting(node * root, node * parent,
-                                        int left_index,
-        int key, node * right);
-node * insert_into_parent(node * root, node * left, int key, node * right);
-node * insert_into_new_root(node * left, int key, node * right);
-node * start_new_tree(int key, record * pointer);
-node * insert( node * root, int key, int value );
-
-// Deletion.
-
-int get_neighbor_index( node * n );
-node * adjust_root(node * root);
-node * coalesce_nodes(node * root, node * n, node * neighbor,
-                      int neighbor_index, int k_prime);
-node * redistribute_nodes(node * root, node * n, node * neighbor,
-                          int neighbor_index,
-        int k_prime_index, int k_prime);
-node * delete_entry( node * root, node * n, int key, void * pointer );
-node * db_delete( node * root, int key );
-
-void destroy_tree_nodes(node * root);
-node * destroy_tree(node * root);
-
-#endif /* __BPT_H__*/
+#endif

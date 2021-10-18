@@ -2,28 +2,10 @@
 #define DB_FILE_H_
 
 #include <stdint.h>
-
-#define INITIAL_DB_FILE_SIZE (10 * 1024 * 1024)// 10 MiB
-#define PAGE_SIZE (4 * 1024)// 4 KiB
+#include "page.h"
 
 extern int fd;
 
-typedef uint64_t pagenum_t;
-typedef struct page_t {
-	// in-memory page structure
-	char page_size[PAGE_SIZE];
-}page_t;
-
-typedef struct header_t {
-	pagenum_t first_free_page;
-	pagenum_t page_num;
-	char reserved[4080];
-}header_t;
-
-typedef struct free_t {
-	pagenum_t next_page_num;
-	char reserved[4088];
-}free_t;
 
 // Open existing database file or create on if not existed
 int file_open_database_file(const char* pathname);

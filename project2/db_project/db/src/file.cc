@@ -5,48 +5,48 @@
 #include <sys/types.h>
 #include <stdlib.h>
 
-int fd=-1;
+// int fd = -1;
 
 // Open existing database file or create on if not existed
 int file_open_database_file(const char* pathname) {
    header_t root;
    pagenum_t free_init_pages_num;
-   
-   fd = open(pathname, O_RDWR, 0644);
-   if(fd!=-1)
-      return fd;
+	printf("hi");
+    if((fd = open(pathname, O_RDWR | O_SYNC)) >= 0) {
+		// printf("value of fdin: %d\n",fd);
+        return fd;
+    }
 
-   fd = open(pathname, O_RDWR|O_CREAT|O_EXCL , 0644);
-
+  	if((fd = open(pathname, O_RDWR | O_SYNC | O_CREAT, 0644)) >= 0){
+		// printf("value of fd: %d\n",fd);
    //initialize
-   int init_free_num = INITIAL_DB_FILE_SIZE/PAGE_SIZE-1; 
-   
-   free_t * free_pages;
-   free_pages = (free_t*)malloc(sizeof(page_t)*init_free_num);
+		int init_free_num = INITIAL_DB_FILE_SIZE/PAGE_SIZE-1; 
+		
+		free_t * free_pages;
+		free_pages = (free_t*)malloc(sizeof(page_t)*init_free_num);
 
-   root.first_free_page = 0;
-   root.page_num = 1;
+		root.first_free_page = 1;
 
-   root.first_free_page = root.page_num;
-   root.page_num = init_free_num+1;
+		root.page_num = init_free_num+1;
+			
+		for(int i = 0; i<(init_free_num); i++){ 
+			if(i == (init_free_num-1)){
+				free_pages[i].next_page_num = 0; 
+				pwrite(fd, (page_t *)&free_pages[i], PAGE_SIZE, PAGE_SIZE*(i+1));
+				sync();
+				break;
+			}
+			
+			free_pages[i].next_page_num = i+2;  
+			pwrite(fd, (page_t *)&free_pages[i], PAGE_SIZE, PAGE_SIZE*(i+1)); 
+			sync();
+		}
 
-   for(int i = 0; i<(init_free_num); i++){ 
-      if(i == (init_free_num-1)){
-         free_pages[i].next_page_num = 0; 
-         pwrite(fd, (page_t *)&free_pages[i], PAGE_SIZE, PAGE_SIZE*(i+1));
-         sync();
-         break;
-      }
-      
-      free_pages[i].next_page_num = i+2;  
-      pwrite(fd, (page_t *)&free_pages[i], PAGE_SIZE, PAGE_SIZE*(i+1)); 
-      sync();
+		pwrite(fd, (page_t*)&root, PAGE_SIZE, 0);
+		sync();
+		free(free_pages);
    }
-
-   pwrite(fd, (page_t*)&root, PAGE_SIZE, 0);
-   sync();
-
-   free(free_pages);
+  
 
 
    return fd;
@@ -61,25 +61,24 @@ pagenum_t file_alloc_page(int fd) {
 	header_t header_page;
 	free_t free_page;
 	pagenum_t first_free_page;
-
+	
     pread(fd, (page_t*)&header_page, PAGE_SIZE, 0);
 	sync();
 
 	first_free_page = header_page.first_free_page;
-	
+	// printf("first free page: %d\n",first_free_page);
 	// if next page doesn't exist
 	if (first_free_page == 0) {
 		pagenum_t init_num = header_page.page_num;
-
+		// printf("headerpagenum: %d\n",init_num);
 		int tmp = header_page.page_num;
-
-   		free_t * free_pages;
-    	free_pages = (free_t*)malloc(sizeof(page_t)*init_num);
 
    		header_page.first_free_page = header_page.page_num;
    		header_page.page_num += init_num;
-
-    	for(int i = 0; i<(init_num); i++){ 
+		
+		free_t *free_pages = (free_t*)malloc(sizeof(page_t)*init_num);
+    	
+		for(int i = 0; i<(init_num); i++){ 
      		if(i == (init_num-1)){
         	free_pages[i].next_page_num = 0; 
         	pwrite(fd, (page_t *)&free_pages[i], PAGE_SIZE, PAGE_SIZE*(tmp));
@@ -98,10 +97,12 @@ pagenum_t file_alloc_page(int fd) {
 
 		first_free_page = header_page.first_free_page;
 	}
-
+	
     pread(fd, (page_t*)&free_page, PAGE_SIZE, PAGE_SIZE*(first_free_page));
 	sync();
+	// printf("free_page.net_page_num: %d\n", (int)free_page.next_page_num);
 	header_page.first_free_page = free_page.next_page_num;
+	
     pwrite(fd, (page_t*)&header_page, PAGE_SIZE, 0);
 	sync();
 	return first_free_page;
