@@ -11,7 +11,6 @@
 int file_open_database_file(const char* pathname) {
    header_t root;
    pagenum_t free_init_pages_num;
-	printf("hi");
     if((fd = open(pathname, O_RDWR | O_SYNC)) >= 0) {
 		// printf("value of fdin: %d\n",fd);
         return fd;
