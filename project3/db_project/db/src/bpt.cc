@@ -465,12 +465,11 @@ int delete_entry(uint64_t table_id, pagenum_t root_page_num, pagenum_t key_page_
     
     buf_read_page(table_id, key_page.parent_page_num, (page_t*)&parent_page);
     buf_write_page(table_id, key_page.parent_page_num, (page_t*)&parent_page);
-    k_prime_index = neighbor_index == -2 ? 0 : neighbor_index+1;
+    k_prime_index = neighbor_index == -1 ? 0 : neighbor_index;
     k_prime = parent_page.record[k_prime_index].key;
-    neighbor_page_num = neighbor_index == -1 ? parent_page.left_page_num : parent_page.record[neighbor_index].key_page_num;
-    // added neighbor_index-1 above
-    if(neighbor_index == -2)
-        neighbor_page_num = parent_page.record[0].key_page_num; // added
+    neighbor_page_num = neighbor_index == -1 ? parent_page.record[0].key_page_num : parent_page.record[neighbor_index-1].key_page_num;
+    if(neighbor_index == 0)
+        neighbor_page_num = parent_page.left_page_num;
 
     int capacity = key_page.is_leaf ? leaf_order : inter_order-1;
 
@@ -562,11 +561,12 @@ int get_neighbor_index(uint64_t table_id, pagenum_t key_page_num){
     buf_write_page(table_id, key_page_num, (page_t*)&key_page);
     buf_read_page(table_id, key_page.parent_page_num, (page_t*)&parent_page);
     buf_write_page(table_id, key_page.parent_page_num, (page_t*)&parent_page);
-    if(parent_page.left_page_num == key_page_num)
-        return -2; // added
-    for(int i =0; i< parent_page.num_of_keys; i++){
+    for(int i =0; i <= parent_page.num_of_keys; i++){
         if(parent_page.record[i].key_page_num == key_page_num)
-            return i-1 ;// i - 1
+            return i;
+    }
+    if(parent_page.left_page_num == key_page_num){
+        return -1;        
     }
 
 
@@ -586,7 +586,7 @@ void coalesce_nodes(uint64_t table_id,pagenum_t root_page_num,pagenum_t key_page
     pagenum_t tmp_page_num, key_page_parent_num;
     printf("coalesce_nodes-------------------\n");
     
-    if(neighbor_index == -2){
+    if(neighbor_index == -1){
         tmp_page_num = key_page_num;
         key_page_num = neighbor_page_num;
         neighbor_page_num = tmp_page_num;
