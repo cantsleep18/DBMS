@@ -50,8 +50,6 @@ lock_t* lock_acquire(int64_t table_id, int64_t key) {
   hash_table_t* find_result;
   HASH_FIND(hh, hash_table, &hash_table_entry->pair, sizeof(pair_t), find_result);
 
-
-
   if(find_result == NULL){
     // printf("acquire: 1\n");
     hash_table_entry->head = (lock_t*)malloc(sizeof(lock_t));
