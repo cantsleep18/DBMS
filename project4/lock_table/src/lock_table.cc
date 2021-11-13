@@ -66,7 +66,7 @@ lock_t* lock_acquire(int64_t table_id, int64_t key) {
     HASH_ADD(hh, hash_table, pair ,sizeof(pair_t),hash_table_entry);
   }else{
     if(hash_table->head == NULL){
-      printf("acquire: 2\n");
+      // printf("acquire: 2\n");
       HASH_DEL(hash_table, find_result);
 
       hash_table_entry->head = (lock_t*)malloc(sizeof(lock_t));
