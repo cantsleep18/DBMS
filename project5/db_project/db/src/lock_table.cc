@@ -70,10 +70,10 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
           return tmp_lock;  
         // else if(tmp_lock->lock_status == ACQUIRED && tmp_lock->lock_mode == 0)
         //   s_lock_flag = 1;
-        else if(tmp_lock->lock_mode == 1)
+        else if(tmp_lock->record_id == key&&tmp_lock->lock_mode == 1){
           x_lock_flag = 1;
-        if(x_lock_flag ==1)
           break;
+        }
         tmp_lock = tmp_lock->next; 
       }
       
@@ -204,6 +204,7 @@ int lock_release(lock_t* lock_obj){
   
   lock_t*tmp_lock = NULL;
   int first_lock_flag = -1;
+  int tmp_record = -1;
 
   if(lock_obj->sentinel->head == NULL){
     // printf("release: 1\n");
@@ -226,6 +227,9 @@ int lock_release(lock_t* lock_obj){
     while(tmp_lock != lock_obj->sentinel->tail){
           if(tmp_lock->lock_status == WAITING && tmp_lock->lock_mode == 0){
             tmp_lock->lock_status == ACQUIRED;
+
+            tmp_record = tmp_lock->record_id;
+
             pthread_cond_signal(&(tmp_lock->con));
             first_lock_flag = 0;
           }else if(tmp_lock->lock_status == WAITING && tmp_lock->lock_mode == 1){
@@ -237,16 +241,17 @@ int lock_release(lock_t* lock_obj){
 
           if(first_lock_flag == 0){
             while(tmp_lock != lock_obj->sentinel->tail){
-              if(tmp_lock->lock_mode ==1){
+              if(tmp_lock->lock_mode ==1 && tmp_lock->record_id == tmp_record){
                 break;
-              }else if(tmp_lock->lock_status == WAITING && tmp_lock->lock_mode == 0){
+              }else if(tmp_lock->lock_status == WAITING && tmp_lock->lock_mode == 0 && tmp_lock->record_id == tmp_record){
                 tmp_lock->lock_status = ACQUIRED;
+                pthread_cond_signal(&(tmp_lock->con));
               }
               tmp_lock = tmp_lock->next; 
             }
             break;
           }
-    
+          
 
       tmp_lock = tmp_lock->next; 
     }
