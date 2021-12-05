@@ -16,8 +16,8 @@ struct trx_t{
     UT_hash_handle hh;
 };
 
-pthread_mutex_t trx_table_latch;
-trx_t * trx_table;
+static pthread_mutex_t trx_table_latch;
+static trx_t * trx_table;
 
 int trx_init();
 int trx_begin();

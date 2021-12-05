@@ -42,8 +42,8 @@ struct hash_table_t
   UT_hash_handle hh;
 };
 
-pthread_mutex_t lock_table_latch;
-hash_table_t* hash_table;
+static pthread_mutex_t lock_table_latch;
+static hash_table_t* hash_table;
 
 /* APIs for lock table */
 int init_lock_table();
