@@ -4,9 +4,10 @@
             "name": "Linux",
             "includePath": [
                 "${default}",
-                "${workspaceFolder}/project2/db_project/db/include",
-                "${workspaceFolder}/project3/db_project/db/include",
-                "${workspaceFolder}/project4/lock_table/include"
+                // "${workspaceFolder}/project2/db_project/db/include",
+                // "${workspaceFolder}/project3/db_project/db/include",
+                // "${workspaceFolder}/project4/lock_table/include",
+                "${workspaceFolder}/project5/db_project/db/include"
             ],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "gnu11",
