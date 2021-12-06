@@ -66,13 +66,11 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
     // when given lock_mode is S-LOCk
     if(lock_mode == 0){
       // check where to put lock
-      while(tmp_lock != find_result->tail){
+      while(tmp_lock != NULL){
         if (tmp_lock->owner_trx_id == trx_id){
           pthread_mutex_unlock(&lock_table_latch);
           
           return tmp_lock;
-        // else if(tmp_lock->lock_status == ACQUIRED && tmp_lock->lock_mode == 0)
-        //   s_lock_flag = 1;
         }else if(tmp_lock->record_id == key&&tmp_lock->lock_mode == 1){
           x_lock_flag = 1;
           break;
@@ -137,7 +135,7 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
       
       int same_lock_flag = 0;
       
-      while(tmp_lock != find_result->tail){
+      while(tmp_lock != NULL){
         //check with same trx_id
         if(tmp_lock->owner_trx_id == trx_id && tmp_lock->lock_mode == 0){
           tmp_lock->lock_mode == 1;
@@ -236,7 +234,7 @@ int lock_release(lock_t* lock_obj){
     lock_obj->prev->next = lock_obj->next;
     lock_obj->next->prev = lock_obj->prev;
     
-    while(tmp_lock != lock_obj->sentinel->tail){
+    while(tmp_lock != NULL){
           if(tmp_lock->lock_status == WAITING && tmp_lock->lock_mode == 0){
             tmp_lock->lock_status == ACQUIRED;
 
@@ -253,7 +251,7 @@ int lock_release(lock_t* lock_obj){
           }
 
           if(first_lock_flag == 0){
-            while(tmp_lock != lock_obj->sentinel->tail){
+            while(tmp_lock != NULL){
               if(tmp_lock->lock_mode ==1 && tmp_lock->record_id == tmp_record){
                 break;
               }else if(tmp_lock->lock_status == WAITING && tmp_lock->lock_mode == 0 && tmp_lock->record_id == tmp_record){
