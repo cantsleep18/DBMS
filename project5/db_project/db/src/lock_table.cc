@@ -53,6 +53,8 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 
     HASH_ADD(hh, hash_table, pair ,sizeof(pair_t),hash_table_entry);
 
+    pthread_mutex_unlock(&lock_table_latch);
+
     return lock;
   }else{ // pair exists
     hash_table_entry = find_result;
@@ -66,11 +68,13 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
     if(lock_mode == 0){
       // check where to put lock
       while(tmp_lock != find_result->tail){
-        if (tmp_lock->owner_trx_id == trx_id)
-          return tmp_lock;  
+        if (tmp_lock->owner_trx_id == trx_id){
+          pthread_mutex_unlock(&lock_table_latch);
+          
+          return tmp_lock;
         // else if(tmp_lock->lock_status == ACQUIRED && tmp_lock->lock_mode == 0)
         //   s_lock_flag = 1;
-        else if(tmp_lock->record_id == key&&tmp_lock->lock_mode == 1){
+        }else if(tmp_lock->record_id == key&&tmp_lock->lock_mode == 1){
           x_lock_flag = 1;
           break;
         }
@@ -99,6 +103,8 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 
         pthread_mutex_unlock(&trx_table_latch);
 
+        pthread_mutex_unlock(&lock_table_latch);
+
         return lock;
       }else{
         lock->prev = hash_table_entry->tail->prev; // lock <- new lock
@@ -124,6 +130,8 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 
         pthread_cond_wait(&lock->con, &lock_table_latch);
         
+        pthread_mutex_unlock(&lock_table_latch);
+
         return lock;
       }
     }else if(lock_mode == 1){ // given lock is LOCK X
@@ -170,6 +178,8 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 
         pthread_cond_wait(&lock->con, &lock_table_latch);
         
+        pthread_mutex_unlock(&lock_table_latch);
+
         return lock;
       }else{
         lock->prev = hash_table_entry->tail->prev; // lock <- new lock
@@ -192,6 +202,8 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
         trx->next_lock = lock;
 
         pthread_mutex_unlock(&trx_table_latch);
+
+        pthread_mutex_unlock(&lock_table_latch);
 
         return lock;
       }
