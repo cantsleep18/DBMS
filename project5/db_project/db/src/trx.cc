@@ -17,7 +17,7 @@ int trx_begin(){
     trx->trx_id = trx_id;
     trx->next_lock =NULL;
     trx->next_trx = NULL;
-    HASH_ADD(hh, trx_table, trx_id, sizeof(int), trx);
+    // HASH_ADD(hh, trx_table, trx_id, sizeof(int), trx);
 
     pthread_mutex_unlock(&trx_table_latch);
 
@@ -33,16 +33,16 @@ int trx_commit(int trx_id){
     trx_t * trx;
     trx->trx_id = trx_id;
     
-    HASH_FIND(hh, trx_table, &trx->trx_id, sizeof(int), trx);
+    // HASH_FIND(hh, trx_table, &trx->trx_id, sizeof(int), trx);
     lock = trx->next_lock;
     lock_t* tmp_lock = trx->next_lock;
     lock_release(lock);
 
-    // while(tmp_lock != NULL){
-    //     tmp_lock = tmp_lock->trx_next_lock;
-    //     lock = tmp_lock;
-    //     lock_release(lock);
-    // }
+    while(tmp_lock != NULL){
+        tmp_lock = tmp_lock->trx_next_lock;
+        lock = tmp_lock;
+        lock_release(lock);
+    }
 
     // HASH_DEL(trx_table, trx);
     free(trx);
