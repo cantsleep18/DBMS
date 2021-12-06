@@ -59,7 +59,6 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
   }else{ // pair exists
     hash_table_entry = find_result;
 
-    int s_lock_flag = 0; // check (same record_id, ACQUIRED, lock type S) 
     int x_lock_flag = 0; // check (same record_id, lock type X) 
     lock_t * tmp_lock = NULL;
     tmp_lock = find_result->head->next;
