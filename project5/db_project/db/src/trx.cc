@@ -44,5 +44,7 @@ int trx_commit(int trx_id){
         lock = tmp_lock;
         lock_release(lock);
     }
+
+    free(trx);
     pthread_mutex_unlock(&trx_table_latch);
 }

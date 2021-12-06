@@ -107,11 +107,11 @@ int db_update(int64_t table_id , int64_t key, char* values , uint16_t new_val_si
     lock_acquire(table_id, leaf_page_num, key, trx_id, 0);
 
 
-    // for(int i=0; i<64; i++){
-    //     if(leaf.record[i].key == key){
-    //         memcpy(leaf.record[i].value, values, 112);
-    //     }
-    // }
+    for(int i=0; i<64; i++){
+        if(leaf.record[i].key == key){
+            memcpy(leaf.record[i].value, values, 112);
+        }
+    }
     
     buf_read_page(table_id, leaf_page_num, (page_t*)&leaf);
     buf_write_page(table_id, leaf_page_num, (page_t*)&leaf);
