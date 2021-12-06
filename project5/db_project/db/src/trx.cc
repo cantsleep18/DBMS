@@ -14,12 +14,11 @@ int trx_begin(){
     //     trx_id = 1;
     // }
     
-    // trx->trx_id = trx_id;
-    // trx->next_lock =NULL;
+    trx->trx_id = trx_id;
     
-    // HASH_ADD(hh, trx_table, trx_id, sizeof(int), trx);
+    HASH_ADD(hh, trx_table, trx_id, sizeof(int), trx);
 
-    // pthread_mutex_unlock(&trx_table_latch);
+    pthread_mutex_unlock(&trx_table_latch);
 
     trx_id++;
 
