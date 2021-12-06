@@ -27,7 +27,7 @@ struct lock_t {
   int lock_status;
   int owner_trx_id;
 };
-
+ 
 struct pair_t
 {
   int64_t table_id;
