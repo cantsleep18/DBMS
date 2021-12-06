@@ -11,8 +11,8 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
   pthread_mutex_lock(&lock_table_latch);
 
   lock_t* lock = (lock_t*)malloc(sizeof(lock_t));
-  trx_t * trx = NULL;
-  hash_table_t* hash_table_entry = (hash_table_t*)malloc(sizeof(hash_table_t));
+  trx_t * trx;
+  hash_table_t* hash_table_entry;
   
   trx->trx_id = trx_id;
   lock->con = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
@@ -251,7 +251,7 @@ int lock_release(lock_t* lock_obj){
             }
             break;
           }
-          
+
 
       tmp_lock = tmp_lock->next; 
     }

@@ -13,6 +13,8 @@ int buf_init(int num_buf){
     buf_size_num = num_buf;
     left_buf = num_buf;
 
+    buf_latch = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER; 
+
     for(int i=0; i<num_buf; i++){
         buf_pool[i].frame = (page_t*)malloc(sizeof(page_t));
         buf_pool[i].table_id = -1;
@@ -20,6 +22,7 @@ int buf_init(int num_buf){
         buf_pool[i].page_num = -1;
         buf_pool[i].is_dirty = 0;
         buf_pool[i].is_pinned = 0;
+        buf_pool[i].buf_pool_latch = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
         buf_pool[i].prev = -1;
         buf_pool[i].next = -1;
     }
@@ -37,12 +40,20 @@ int buf_init(int num_buf){
 }
 
 int buf_open_database_file(const char* pathname){
+    
+    pthread_mutex_lock(&buf_latch);
+
     fd = file_open_database_file(pathname);
-               
+
+    pthread_mutex_unlock(&buf_latch);
+
     return fd;
 }
 
 pagenum_t buf_alloc_page(int fd){ 
+
+    pthread_mutex_lock(&buf_latch);
+
     pagenum_t alloc_page_num;
     header_t tmp;
     int i = 0;
@@ -54,14 +65,25 @@ pagenum_t buf_alloc_page(int fd){
             break;
         }
     }
+
+    pthread_mutex_unlock(&buf_latch);
+
     return alloc_page_num;
 }
 
 void buf_free_page(int fd,pagenum_t pagenum){
+
+    pthread_mutex_lock(&buf_latch);
+
     file_free_page(fd, pagenum);
+
+    pthread_mutex_unlock(&buf_latch);
 }
 
 void buf_read_page(int fd, pagenum_t pagenum, page_t* dest){
+
+    pthread_mutex_lock(&buf_latch);
+
     int i = 0;
     int buffer_index = 0;
     int prev_buf=0, next_buf=0, start_next=0;
@@ -70,6 +92,8 @@ void buf_read_page(int fd, pagenum_t pagenum, page_t* dest){
         if(buf_pool[i].table_id == fd && buf_pool[i].page_num == 0 && pagenum == 0 ){
             
             memcpy(dest, buf_pool[i].frame, sizeof(page_t));
+
+            pthread_mutex_unlock(&buf_latch);
 
             return;
         }                
@@ -80,6 +104,8 @@ void buf_read_page(int fd, pagenum_t pagenum, page_t* dest){
             buf_pool[i].is_pinned += 1;
 
             memcpy(dest, buf_pool[i].frame, sizeof(page_t));
+
+            pthread_mutex_unlock(&buf_latch);
 
             return;
         }                
@@ -110,6 +136,8 @@ void buf_read_page(int fd, pagenum_t pagenum, page_t* dest){
 
                 file_read_page(fd, pagenum, buf_pool[i].frame);
                 memcpy(dest, buf_pool[i].frame, sizeof(page_t));
+
+                pthread_mutex_unlock(&buf_latch);
                 
                 return;                
             }
@@ -162,15 +190,23 @@ void buf_read_page(int fd, pagenum_t pagenum, page_t* dest){
         file_read_page(fd, pagenum, buf_pool[buffer_index].frame);
         memcpy(dest, buf_pool[buffer_index].frame, sizeof(page_t));
 
+        pthread_mutex_unlock(&buf_latch);
+
         return;
     }
 }
 
 void buf_write_page(int fd, pagenum_t pagenum, const page_t* src){
+
+    pthread_mutex_lock(&buf_latch);
+
     for(int i=0; i<buf_size_num; i++){
         if(buf_pool[i].table_id == fd && buf_pool[i].page_num == 0 && pagenum == 0){
             memcpy(buf_pool[i].frame, src, sizeof(page_t));
             file_write_page(fd, 0, src);
+            
+            pthread_mutex_unlock(&buf_latch);
+            
             return;
         }
     }
@@ -183,6 +219,9 @@ void buf_write_page(int fd, pagenum_t pagenum, const page_t* src){
             buf_pool[i].is_pinned -= 1; 
             
             memcpy(buf_pool[i].frame, src, sizeof(page_t));
+
+            pthread_mutex_unlock(&buf_latch);
+
             return;
         }
         // for(int i=0; i< buf_size_num; i++){
@@ -190,9 +229,14 @@ void buf_write_page(int fd, pagenum_t pagenum, const page_t* src){
         // }
         // printf("%d, %ld, %d\n", fd, pagenum, i);
     }
+
+    pthread_mutex_unlock(&buf_latch);
 }
 
 void buf_close_database_file(){ 
+
+    pthread_mutex_lock(&buf_latch);
+
     for(int i=0; i<buf_size_num;i++){
         file_write_page(fd, buf_pool[i].page_num, buf_pool[i].frame);
         free(buf_pool[i].frame);
@@ -201,4 +245,6 @@ void buf_close_database_file(){
     free(buf_control);
     
     file_close_database_file();
+
+    pthread_mutex_unlock(&buf_latch);
 }

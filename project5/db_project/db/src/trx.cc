@@ -5,11 +5,6 @@
 
 int trx_id = 1;
 
-int trx_init(){ //이 선언에는 스토리지 클래스 또는 형식 지정자가 없습니다. error keep occurs so I made init function
-    trx_table_latch = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
-    trx_table = NULL;
-}
-
 int trx_begin(){
     pthread_mutex_lock(&trx_table_latch);
     trx_t *trx = (trx_t*)malloc(sizeof(trx_t));

@@ -14,6 +14,7 @@ typedef struct buffer_t{
     pagenum_t page_num;
     int is_dirty;
     int is_pinned;
+    pthread_mutex_t buf_pool_latch;
     int prev;
     int next;
 }buffer_t;
@@ -23,6 +24,8 @@ typedef struct buf_control_t{
     int prev;
     int next;
 }buf_control_t;
+
+static pthread_mutex_t buf_latch;
 
 int buf_init(int num_buf);
 
