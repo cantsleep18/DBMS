@@ -10,9 +10,9 @@ int trx_begin(){
 
     trx_t *trx = (trx_t*)malloc(sizeof(trx_t));
     
-    // if(trx_id <= 0 ){
-    //     trx_id = 1;
-    // }
+    if(trx_id <= 0 ){
+        trx_id = 1;
+    }
     
     trx->trx_id = trx_id;
     
