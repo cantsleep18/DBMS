@@ -2,4 +2,4 @@
 #define Disk_Based_Bpt_VERSION_MAJOR 
 #define Disk_Based_Bpt_VERSION_MINOR 
 /* #undef USE_BPT */
-/* #undef USE_GOOGLE_TEST */
+#define USE_GOOGLE_TEST

@@ -33,13 +33,15 @@ int trx_commit(int trx_id){
     lock = trx->next_lock;
     lock_t* tmp_lock = trx->next_lock;
     lock_release(lock);
+
+    lock_t* tmp_tail = tmp_lock->sentinel->tail;
     
-    while(tmp_lock!=NULL){
+    while(tmp_lock != tmp_tail){
         tmp_lock = tmp_lock->trx_next_lock;
         lock = tmp_lock;
         lock_release(lock);
     }
-
+    HASH_DEL(trx_table, trx);
     free(trx);
     pthread_mutex_unlock(&trx_table_latch);
 }

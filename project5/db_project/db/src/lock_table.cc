@@ -106,7 +106,7 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
         pthread_mutex_unlock(&lock_table_latch);
 
         return lock;
-      }else{
+      }else{ // x_lock_flag == 1
         lock->prev = hash_table_entry->tail->prev; // lock <- new lock
         hash_table_entry->tail->prev->next = lock; // lock -> new lock
         lock->next = NULL; // new lock -> NULL
@@ -220,6 +220,7 @@ int lock_release(lock_t* lock_obj){
 
   if(lock_obj->sentinel->head == NULL){
     // printf("release: 1\n");
+    pthread_mutex_unlock(&lock_table_latch);
     return -1;
   }else if(lock_obj->sentinel->head->next == lock_obj->sentinel->tail->prev){
     // printf("release: 2\n");
@@ -248,6 +249,7 @@ int lock_release(lock_t* lock_obj){
             tmp_lock->lock_status == ACQUIRED;
             pthread_cond_signal(&(tmp_lock->con));
             
+            pthread_mutex_unlock(&lock_table_latch);
             return 0;
           }
 
