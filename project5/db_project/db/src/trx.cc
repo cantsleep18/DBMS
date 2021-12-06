@@ -30,7 +30,7 @@ int trx_commit(int trx_id){
     pthread_mutex_lock(&trx_table_latch);
 
     lock_t* lock;
-    trx_t * trx = NULL;
+    trx_t * trx;
     trx->trx_id = trx_id;
     
     HASH_FIND(hh, trx_table, &trx->trx_id, sizeof(int), trx);
@@ -38,8 +38,6 @@ int trx_commit(int trx_id){
     lock_t* tmp_lock = trx->next_lock;
     lock_release(lock);
 
-    lock_t* tmp_tail = tmp_lock->sentinel->tail;
-    
     while(tmp_lock != NULL){
         tmp_lock = tmp_lock->trx_next_lock;
         lock = tmp_lock;
