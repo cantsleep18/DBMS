@@ -12,7 +12,7 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 
   lock_t* lock = (lock_t*)malloc(sizeof(lock_t));
   trx_t * trx;
-  hash_table_t* hash_table_entry;
+  hash_table_t* hash_table_entry = (hash_table_t*)malloc(sizeof(hash_table_t));
   
   trx->trx_id = trx_id;
   lock->con = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
@@ -58,7 +58,7 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
     hash_table_entry = find_result;
 
     int s_lock_flag = 0; // check (same record_id, ACQUIRED, lock type S) 
-    int x_lock_flag = 0; // check (same record_id, lock type X)
+    int x_lock_flag = 0; // check (same record_id, lock type X) 
     lock_t * tmp_lock = NULL;
     tmp_lock = find_result->head->next;
     

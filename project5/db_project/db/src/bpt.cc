@@ -40,7 +40,7 @@ int db_find(int64_t table_id, int64_t key, char *ret_val, uint16_t *val_size, in
     buf_read_page(table_id, leaf_page_num, (page_t*)&leaf);
     buf_write_page(table_id, leaf_page_num, (page_t*)&leaf);
     
-    lock_acquire(table_id, leaf_page_num, key, trx_id, 0);
+    // lock_acquire(table_id, leaf_page_num, key, trx_id, 0);
 
     printf("leaf_num_of_key: %d\n",leaf.num_of_keys);   
     for(int i=0; i<leaf.num_of_keys; i++){
@@ -89,32 +89,32 @@ pagenum_t find_leaf(uint64_t table_id, int64_t key, pagenum_t root_page_num){
 }
 
 int db_update(int64_t table_id , int64_t key, char* values , uint16_t new_val_size , uint16_t* old_val_size , int trx_id){
-    header_t header;   
-    internal_t node;
-    leaf_t leaf;
-    pagenum_t next_page_num, leaf_page_num;
+    // header_t header;   
+    // internal_t node;
+    // leaf_t leaf;
+    // pagenum_t next_page_num, leaf_page_num;
     
-    buf_read_page(table_id, 0, (page_t*)&header);
-    buf_write_page(table_id, 0, (page_t*)&header);
-    if(header.root_page_num == 0){
-        return -1;
-    }
+    // buf_read_page(table_id, 0, (page_t*)&header);
+    // buf_write_page(table_id, 0, (page_t*)&header);
+    // if(header.root_page_num == 0){
+    //     return -1;
+    // }
     
-    leaf_page_num = find_leaf(table_id, key, header.root_page_num);
-    buf_read_page(table_id, leaf_page_num, (page_t*)&leaf);
-    buf_write_page(table_id, leaf_page_num, (page_t*)&leaf);
+    // leaf_page_num = find_leaf(table_id, key, header.root_page_num);
+    // buf_read_page(table_id, leaf_page_num, (page_t*)&leaf);
+    // buf_write_page(table_id, leaf_page_num, (page_t*)&leaf);
     
-    lock_acquire(table_id, leaf_page_num, key, trx_id, 0);
+    // lock_acquire(table_id, leaf_page_num, key, trx_id, 0);
 
 
-    for(int i=0; i<64; i++){
-        if(leaf.record[i].key == key){
-            memcpy(leaf.record[i].value, values, 112);
-        }
-    }
+    // for(int i=0; i<leaf.num_of_keys; i++){
+    //     if(leaf.record[i].key == key){
+    //         memcpy(leaf.record[i].value, values, 112);
+    //     }
+    // }
     
-    buf_read_page(table_id, leaf_page_num, (page_t*)&leaf);
-    buf_write_page(table_id, leaf_page_num, (page_t*)&leaf);
+    // buf_read_page(table_id, leaf_page_num, (page_t*)&leaf);
+    // buf_write_page(table_id, leaf_page_num, (page_t*)&leaf);
 
     return 0;
 }
