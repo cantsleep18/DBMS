@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "cwchar": "cpp",
+        "string": "cpp",
+        "vector": "cpp",
+        "iomanip": "cpp",
+        "limits": "cpp",
+        "sstream": "cpp",
+        "stdexcept": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp"
+    }
+}
