@@ -14,8 +14,8 @@ project(googletest-populate NONE)
 include(ExternalProject)
 ExternalProject_Add(googletest-populate
                      "UPDATE_DISCONNECTED" "False" "URL" "https://github.com/google/googletest/archive/e4717df71a4f45bf9f0ac88c6cd9846a0bc248dd.zip"
-                    SOURCE_DIR          "/home/cantsleep/2021_ite2038_2018007429/project5/db_project/build/_deps/googletest-src"
-                    BINARY_DIR          "/home/cantsleep/2021_ite2038_2018007429/project5/db_project/build/_deps/googletest-build"
+                    SOURCE_DIR          "/home/cantsleep/2021_ite2038_2018007429/project6/db_project/build/_deps/googletest-src"
+                    BINARY_DIR          "/home/cantsleep/2021_ite2038_2018007429/project6/db_project/build/_deps/googletest-build"
                     CONFIGURE_COMMAND   ""
                     BUILD_COMMAND       ""
                     INSTALL_COMMAND     ""

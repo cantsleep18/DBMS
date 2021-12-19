@@ -4,8 +4,8 @@
 
 
 # Configuration directories and files
-SourceDirectory: /home/cantsleep/2021_ite2038_2018007429/project5/db_project
-BuildDirectory: /home/cantsleep/2021_ite2038_2018007429/project5/db_project/build
+SourceDirectory: /home/cantsleep/2021_ite2038_2018007429/project6/db_project
+BuildDirectory: /home/cantsleep/2021_ite2038_2018007429/project6/db_project/build
 
 # Where to place the cost data store
 CostDataFile: 
@@ -26,7 +26,7 @@ SubmitURL: http://
 NightlyStartTime: 00:00:00 EDT
 
 # Commands for the build/test/submit cycle
-ConfigureCommand: "/usr/local/bin/cmake" "/home/cantsleep/2021_ite2038_2018007429/project5/db_project"
+ConfigureCommand: "/usr/local/bin/cmake" "/home/cantsleep/2021_ite2038_2018007429/project6/db_project"
 MakeCommand: /usr/local/bin/cmake --build . --config "${CTEST_CONFIGURATION_TYPE}"
 DefaultCTestConfigurationType: Release
 

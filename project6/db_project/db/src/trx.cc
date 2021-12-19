@@ -51,3 +51,7 @@ int trx_commit(int trx_id){
 
     return trx_id;
 }
+
+int trx_abort(int trx_id){
+    return 0;
+}

@@ -1,4 +1,4 @@
-# Install script for directory: /home/cantsleep/2021_ite2038_2018007429/project5/db_project/db
+# Install script for directory: /home/cantsleep/2021_ite2038_2018007429/project6/db_project/db
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

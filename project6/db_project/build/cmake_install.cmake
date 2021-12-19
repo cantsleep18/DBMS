@@ -1,4 +1,4 @@
-# Install script for directory: /home/cantsleep/2021_ite2038_2018007429/project5/db_project
+# Install script for directory: /home/cantsleep/2021_ite2038_2018007429/project6/db_project
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -44,12 +44,12 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/home/cantsleep/2021_ite2038_2018007429/project5/db_project/build/db/cmake_install.cmake")
+  include("/home/cantsleep/2021_ite2038_2018007429/project6/db_project/build/db/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/home/cantsleep/2021_ite2038_2018007429/project5/db_project/build/test/cmake_install.cmake")
+  include("/home/cantsleep/2021_ite2038_2018007429/project6/db_project/build/test/cmake_install.cmake")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT)
@@ -60,5 +60,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/cantsleep/2021_ite2038_2018007429/project5/db_project/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/cantsleep/2021_ite2038_2018007429/project6/db_project/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
