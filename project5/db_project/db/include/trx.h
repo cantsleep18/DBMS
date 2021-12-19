@@ -22,5 +22,6 @@ static trx_t * trx_table = NULL;
 int trx_init();
 int trx_begin();
 int trx_commit(int trx_id);
+int trx_abort(int trx_id);
 
 #endif
