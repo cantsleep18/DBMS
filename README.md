@@ -754,3 +754,886 @@ rootpagenum: 457
 * I made some test file with files that TAs gave us. I saw that my insertion and find operation works when I test with individual operation. But when I executed with default file that TAs gave me, insertion worked well and find also worked well, but in many case, I couldn't find the key using db_find. Did some a lot of debugging using printf.
 * I have to retest and do everything I can do to fix this...! 
 * Before starting project_3, I have to fix operations of project2
+
+***
+
+**Project_3**
+=====================
+The goal of Project_3 is to implement an in-memory buffer manager for 
+caching on-disk pages.
+1. **int buf_init**
+2. **int buf_open_database_file**
+3. **pagenum_t buf_alloc_page**
+4. **void buf_free_page**
+5. **void buf_read_page**
+6. **void buf_write_page**
+7. **void buf_close_database_file**
+# Initalize global variable
+```c
+buffer_t * buf_pool = NULL;
+buf_control_t * buf_control = NULL;
+
+int buf_size_num = 0;
+int left_buf = 0;
+```
+* Use buf_pool for buffer entries and buf_control for linked list 'head', 'tail'
+* buf_size_num is a number of buf entries
+* left_buf to check number of left buf entries 
+
+# int buf_init
+```c
+int buf_init(int num_buf){
+    buf_pool = (buffer_t*)malloc(sizeof(buffer_t)*num_buf);
+    
+    buf_size_num = num_buf;
+    left_buf = num_buf;
+
+    for(int i=0; i<num_buf; i++){
+        buf_pool[i].frame = (page_t*)malloc(sizeof(page_t));
+        buf_pool[i].table_id = -1;
+        buf_pool[i].buffer_index = i;
+        buf_pool[i].page_num = -1;
+        buf_pool[i].is_dirty = 0;
+        buf_pool[i].is_pinned = 0;
+        buf_pool[i].prev = -1;
+        buf_pool[i].next = -1;
+    }
+
+    buf_control = (buf_control_t*)malloc(sizeof(buf_control_t)*2);
+    buf_control[start].buffer_index = -2;
+    buf_control[start].next = -1;
+    buf_control[start].prev = -1;
+
+    buf_control[end].buffer_index = -3;
+    buf_control[end].next = -1;
+    buf_control[end].prev = -1;
+
+    return 0;
+}
+```
+* In buf_init, I allocate memory for buf_pool and buf_control
+* Initialized buf_pool and buf_control
+* And set up the value of buf_size_num, left_buf
+
+# int buf_open_database_file
+```c
+int buf_open_database_file(const char* pathname){
+    fd = file_open_database_file(pathname);
+               
+    return fd;
+}
+```
+* Since there was no error with opening database file, I didn't touch open database file
+
+# pagenum_t buf_alloc_page
+```c
+pagenum_t buf_alloc_page(int fd){ 
+    pagenum_t alloc_page_num;
+    header_t tmp;
+    int i = 0;
+
+    alloc_page_num = file_alloc_page(fd);
+    for(i=0; i< buf_size_num; i++){
+        if(buf_pool[i].page_num == 0){
+            file_read_page(fd, 0, buf_pool[i].frame);
+            break;
+        }
+    }
+    return alloc_page_num;
+}
+
+```
+* My file_alloc_page api does everything inside function, so all I have to do is
+just allocate page and find buffer entry with header page and overwrite on it
+
+# void buf_free_page
+```c
+void buf_free_page(int fd,pagenum_t pagenum){
+    file_free_page(fd, pagenum);
+}
+```
+
+# void buf_read_page
+```c
+void buf_read_page(int fd, pagenum_t pagenum, page_t* dest){
+    int i = 0;
+    int buffer_index = 0;
+    int prev_buf=0, next_buf=0, start_next=0;
+    page_t* tmp_page;
+    for(i=0; i<buf_size_num;i++){
+        if(buf_pool[i].table_id == fd && buf_pool[i].page_num == 0 && pagenum == 0 ){
+            
+            memcpy(dest, buf_pool[i].frame, sizeof(page_t));
+
+            return;
+        }                
+    }
+
+    for(i=0; i<buf_size_num;i++){
+        if(buf_pool[i].table_id == fd && buf_pool[i].page_num == pagenum ){
+            buf_pool[i].is_pinned += 1;
+
+            memcpy(dest, buf_pool[i].frame, sizeof(page_t));
+
+            return;
+        }                
+    }
+    if(left_buf != 0){
+        for(i=0; i<buf_size_num;i++){
+   
+            if(buf_pool[i].table_id == -1 && buf_pool[i].page_num == -1 ){
+                buf_pool[i].table_id = fd;
+                buf_pool[i].page_num = pagenum;
+                buf_pool[i].is_pinned += 1;
+
+                if(i==0){ 
+                    buf_control[start].next = buf_pool[i].buffer_index;
+                    buf_control[end].prev = buf_pool[i].buffer_index;
+
+                    buf_pool[i].prev = buf_control[start].buffer_index;
+                    buf_pool[i].next = buf_control[end].buffer_index;
+                }else{
+                    buf_pool[i-1].prev = buf_pool[i].buffer_index;
+                    
+                    buf_pool[i].next = buf_pool[i-1].buffer_index;
+                    buf_pool[i].prev = buf_control[start].buffer_index;                  
+                    
+                    buf_control[start].next = buf_pool[i].buffer_index;
+                }
+                left_buf -= 1; 
+
+                file_read_page(fd, pagenum, buf_pool[i].frame);
+                memcpy(dest, buf_pool[i].frame, sizeof(page_t));
+                
+                return;                
+            }
+        }     
+    }else{
+        buffer_index = buf_control[end].prev;
+        i = 0;
+
+        int flag = 0;
+        while(1){
+            for(int j=0; j<buf_size_num; j++){
+                if(buf_pool[j].is_pinned == 0){
+                    flag = 1;
+                    break;
+                }
+            }
+            if(flag == 1)
+                break;
+        }
+
+        while(buf_pool[buffer_index].is_pinned >= 1 && i<buf_size_num){ 
+            buffer_index = buf_pool[buffer_index].prev;
+            i++;
+        }
+
+        prev_buf = buf_pool[buffer_index].prev;
+        next_buf = buf_pool[buffer_index].next;
+
+        buf_pool[prev_buf].next = buf_pool[buffer_index].next;
+        buf_pool[next_buf].prev = buf_pool[buffer_index].prev;
+
+        start_next = buf_control[start].next;
+        
+        buf_control[start].next = buf_pool[buffer_index].buffer_index;
+        buf_pool[start_next].prev = buf_pool[buffer_index].buffer_index;
+
+        buf_pool[buffer_index].next = buf_pool[start_next].buffer_index;
+        buf_pool[buffer_index].prev = buf_control[start].buffer_index;
+
+        if(buf_pool[buffer_index].is_dirty == 1){
+            file_write_page(fd, buf_pool[buffer_index].page_num, buf_pool[buffer_index].frame);
+            buf_pool[buffer_index].is_dirty = 0;
+        }
+ 
+        buf_pool[buffer_index].table_id = fd;
+        
+        buf_pool[buffer_index].page_num = pagenum;
+        buf_pool[buffer_index].is_pinned += 1; 
+
+        file_read_page(fd, pagenum, buf_pool[buffer_index].frame);
+        memcpy(dest, buf_pool[buffer_index].frame, sizeof(page_t));
+
+        return;
+    }
+}
+```
+* 1. Check whether the needed pagenum is in buffer entries
+* If there are matching page, then just copy the page data
+* 2-1. If there are left pages then read pagenum from disk and store other data in buf_pool
+* 2-2. If there is no left_buf available, then wait until one of the buf_pool's pin is 0.
+* When we get the buffer_index of that buf_pool, put that buf_pool to the head of linked list. So that this system adheres to LRU Policy
+* 3. If buf_pool[buffer_index] is dirty, then write that page to disk
+
+# void buf_write_page
+```c
+void buf_write_page(int fd, pagenum_t pagenum, const page_t* src){
+    for(int i=0; i<buf_size_num; i++){
+        if(buf_pool[i].table_id == fd && buf_pool[i].page_num == 0 && pagenum == 0){
+            memcpy(buf_pool[i].frame, src, sizeof(page_t));
+            file_write_page(fd, 0, src);
+            return;
+        }
+    }
+    for(int i=0; i<buf_size_num; i++){
+       
+        if(buf_pool[i].table_id == fd && buf_pool[i].page_num == pagenum ){
+            
+            buf_pool[i].is_dirty = 1;
+            
+            buf_pool[i].is_pinned -= 1; 
+            
+            memcpy(buf_pool[i].frame, src, sizeof(page_t));
+            return;
+        }
+    }
+}
+```
+* If the needed pagenum is 0, it means it is header, so I just memcpy, and write data
+to disk.
+* I don't need to mark it as dirty or pinned
+* If not, I find the pagenum in buf_pool and mark it as dirty and pinned.
+* And update the frame in buf_pool
+
+# void buf_close_database_file
+```c
+void buf_close_database_file(){ 
+    for(int i=0; i<buf_size_num;i++){
+        file_write_page(fd, buf_pool[i].page_num, buf_pool[i].frame);
+        free(buf_pool[i].frame);
+    }
+    free(buf_pool);
+    free(buf_control);
+    
+    file_close_database_file();
+}
+```
+* I write all the pages in buffer to disk(flush)
+* And freed allocated variables
+* Then closed DB file
+
+***
+
+**Project_4**
+=====================
+The goal of Project_4 is to implement a lock table module that manages lock objects of
+multiple threads. 
+caching on-disk pages.
+1. **int init_lock_table**
+2. **lock_t\* lock_acquire**
+3. **int lock_release**
+
+# Structure
+```c
+struct pair_t
+{
+  int64_t table_id;
+  int64_t key; 
+};
+
+struct hash_table_t
+{
+  pair_t pair;
+  lock_t* head;
+  lock_t* tail;
+  UT_hash_handle hh;
+};
+
+struct lock_t {
+  lock_t* prev;
+  lock_t* next;
+  hash_table_t* sentinel;
+  pthread_cond_t con;  
+};
+```
+* pair_t to table_id + key structure
+* hash_table_t to represent head, tail
+* UT_hash_handle to control hash table (uthash.h)
+* lock_t to represent lock structure
+
+# init_lock_table
+```c
+hash_table_t* hash_table = NULL;
+pthread_mutex_t lock_table_latch = PTHREAD_MUTEX_INITIALIZER;
+
+int init_lock_table(){
+  return 0;
+}
+```
+* I didn't put anything in init_lock_table function
+* I couldn't find reason why it gets error when I did
+* pthread_mutex_t lock_table_latch;
+* lock_table_latch = PTHREAD_MUTEX_INITIALIZER
+* So, I just initialized hash_table & lock_table_latch above init_lock_table
+
+# lock_acquire
+```c
+lock_t* lock_acquire(int64_t table_id, int64_t key) {
+  pthread_mutex_lock(&lock_table_latch);
+
+  lock_t* lock = (lock_t*)malloc(sizeof(lock_t));
+  hash_table_t* hash_table_entry = (hash_table_t*)malloc(sizeof(hash_table_t));
+  
+  lock->con = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
+
+  hash_table_entry->pair.table_id = table_id;
+  hash_table_entry->pair.key = key;
+
+  hash_table_t* find_result;
+  HASH_FIND(hh, hash_table, &hash_table_entry->pair, sizeof(pair_t), find_result);
+
+  if(find_result == NULL){
+    // printf("acquire: 1\n");
+    hash_table_entry->head = (lock_t*)malloc(sizeof(lock_t));
+    hash_table_entry->tail = (lock_t*)malloc(sizeof(lock_t));
+
+    hash_table_entry->head->next = lock;
+    hash_table_entry->tail->prev = lock;
+
+    lock->prev = NULL;
+    lock->next = NULL;
+ 
+    lock->sentinel = hash_table_entry;
+
+    HASH_ADD(hh, hash_table, pair ,sizeof(pair_t),hash_table_entry);
+  }else{
+    if(hash_table->head == NULL){
+      printf("acquire: 2\n");
+      HASH_DEL(hash_table, find_result);
+
+      hash_table_entry->head = (lock_t*)malloc(sizeof(lock_t));
+      hash_table_entry->tail = (lock_t*)malloc(sizeof(lock_t));
+
+      hash_table_entry->head->next = lock;
+      hash_table_entry->tail->prev = lock;
+      
+      lock->prev = NULL;
+      lock->next = NULL;
+      lock->sentinel = hash_table_entry;
+      
+      HASH_ADD(hh, hash_table, pair ,sizeof(pair_t),hash_table_entry);
+    }else{
+      // printf("acquire: 3\n");
+      hash_table_entry = find_result;
+      HASH_DEL(hash_table, find_result);
+
+      lock->prev = hash_table_entry->tail->prev; // lock <- new lock
+      hash_table_entry->tail->prev->next = lock; // lock -> new lock
+      lock->next = NULL; // new lock -> NULL
+      hash_table_entry->tail->prev = lock; // new lock <- tail
+
+      
+      HASH_ADD(hh, hash_table, pair ,sizeof(pair_t),hash_table_entry);
+      lock->sentinel = hash_table_entry;
+      pthread_cond_wait(&lock->con, &lock_table_latch);
+    } 
+  }
+  
+  pthread_mutex_unlock(&lock_table_latch);
+
+  return lock;
+};
+```
+* 1. When table_id, key are not in hash table
+* 2. When table_id, key are in hash table
+* 2-1. When there are no head
+* 2-2. When there are head
+* I used HASH_ADD & HASH_DEL to manage hash_table
+* When new lock is added, then I re-link head and tail of hash_table_entry
+* In 2-2, corresponding lock wait until released lock gives signal
+
+# lock_release
+```c
+int lock_release(lock_t* lock_obj){
+  pthread_mutex_lock(&lock_table_latch);
+  
+  if(lock_obj->sentinel->head == NULL){
+    // printf("release: 1\n");
+    return -1;
+  }else if(lock_obj->sentinel->head->next == lock_obj->sentinel->tail->prev){
+    // printf("release: 2\n");
+    lock_obj->sentinel->head->next = NULL;
+    lock_obj->sentinel->tail->prev = NULL;
+
+    HASH_DEL(hash_table, lock_obj->sentinel);
+    
+    free(lock_obj->sentinel->head);
+    free(lock_obj->sentinel->tail);
+    free(lock_obj->sentinel);
+    
+  }else{
+    // printf("release: 3\n");
+    lock_t* new_head = lock_obj->next;
+    lock_obj->sentinel->head->next = new_head;
+    lock_obj->prev = NULL;
+    
+    pthread_cond_signal(&(new_head->con));
+  }
+  free(lock_obj);
+ 
+  pthread_mutex_unlock(&lock_table_latch);
+
+  return 0;
+}
+```
+* 1. When parameter lock's hash_table_entry doesn't have head
+* 2. When parameter lock's hash_table_entry has only one lock
+* 3. When parameter lock's hash_table_entry has more than one lock
+* In 1, just return -1
+* In 2, free the allocated head and corresponding hash_table_entry
+* In 3, Make head linked to next lock and send signal to wake up sleeping process
+
+
+***
+
+**Project_5**
+=====================
+The goal of Project_5 is to implement a lock table to bpt module that manages lock objects of
+multiple threads. 
+My lock manager should provide:
+- Conflict-serializable schedule for transactions
+- Strict-2PL
+- Deadlock detection (abort the transaction if detected)
+- Record-level locking with Shared(S)/Exclusive(X) mode
+
+# About Lock mode (shared & exclusive)
+* There are some conditions these two lock has to keep. And with this condition, I made sequence.
+![캡처](/uploads/c891547b5840e34ea20cc7f77d5c054c/캡처.PNG)
+
+# deadlock
+* 수업에서 들을 때는 구현할 수 있을 것이라고 생각했는데... 막상 직접 구현해보니 좀 많이 어렵다고 느꼈습니다.
+* deadlock이 발생하는 원인도 알고 있고 해결 방법도 알고 있는데, 제 코드구현 능력이 부족해서 시간이 더 필요할 것 같습니다.
+* Test server에서 segment fault가 계속 떠서 원인을 찾느라 현재 큰그림으로 생각중인 deadlock 코드를 테스트 못하였습니다.
+* Project6가 나온 시점에서 Project5를 구현하지 못하면 Project6 를 진행할 수 없다고 생각되서 제 능력 범위 내에서 최선을 다할 생각입니다.
+
+# abort and roll back
+* deadlock 부분이 구현이 되야지 어떤 부분에서 deadlock detection 을 해야될지 결정할 수 있을 것 같습니다.
+* 현재 생각 중인 그림은 deadlock detection 된 시점에서 타겟이 된 trx을 모두 abort하고 trx_hash_table에서 제거하는 것 입니다.
+* abort의 과정에서 기존에 백업해두었던 정보들을 다시 복구하고 buf write를 진행할 예정입니다.
+* 아마 lock_acquire 함수의 리턴값으로 abort인지 아닌지를 판단하게 될 것 같습니다.
+
+# Structure
+1. **int trx_begin(void)**
+2. **int trx_commit(int trx_id)**
+3. **int db_find(int64_t table_id, int64_t key, char\* ret_val, uint16_t \* val_size, int trx_id)**
+4. **int db_update(int64_t table_id, int64_t key, char\* ret_val, uint16_t * val_size, int trx_id)**
+5. **lock_t \* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_id, int lock_mode)**
+6. **int lock_release(lock_t * lock_obj)**
+
+# int trx_begin(void)
+```c
+int trx_begin(){
+    pthread_mutex_lock(&trx_table_latch);
+
+    trx_t *trx = (trx_t*)malloc(sizeof(trx_t));
+    
+    if(trx_id <= 0 ){
+        trx_id = 1;
+    }
+    
+    trx->trx_id = trx_id;
+
+    HASH_ADD(hh, trx_table, trx_id, sizeof(int), trx);
+
+    pthread_mutex_unlock(&trx_table_latch);
+
+    trx_id++;
+
+    return trx->trx_id;
+}
+```
+* I allocated memory for trx.
+* Using global variable trx_id, i gave transaction different id.
+* I initialized trx with information and added to trx_hash table.
+* In here, I put mutex to prevent is process
+
+# int trx_commit(int trx_id)
+```c
+int trx_commit(int trx_id){
+    pthread_mutex_lock(&trx_table_latch);
+
+    lock_t* lock;
+    trx_t * trx;
+    trx_t * find_result;
+    
+    trx->trx_id = trx_id;
+    
+    HASH_FIND(hh, trx_table, &trx->trx_id, sizeof(int), find_result);
+    lock = find_result->next_lock;
+    lock_t* tmp_lock = find_result->next_lock;
+    lock_release(lock);
+
+    while(tmp_lock != NULL){
+        tmp_lock = tmp_lock->trx_next_lock;
+        lock = tmp_lock;
+        lock_release(lock);
+    }
+
+    HASH_DEL(trx_table, find_result);
+    free(find_result);
+    pthread_mutex_unlock(&trx_table_latch);
+
+    return trx_id;
+}
+```
+* Find the trx_hash table using trx_id and save it to find_result
+* release all of the lock in find_result lock linked list using while loop
+* Since everything is commited, I have to Delete hash table
+
+# int db_find(int64_t table_id, int64_t key, char\* ret_val, uint16_t \* val_size, int trx_id)
+```c
+int db_find(int64_t table_id, int64_t key, char *ret_val, uint16_t *val_size, int trx_id){
+    header_t header;   
+    internal_t node;
+    leaf_t leaf;
+    pagenum_t next_page_num, leaf_page_num;
+    
+    buf_read_page(table_id, 0, (page_t*)&header);
+    buf_write_page(table_id, 0, (page_t*)&header);
+    if(header.root_page_num == 0){
+        return -1;
+    }
+    
+    leaf_page_num = find_leaf(table_id, key, header.root_page_num);
+    buf_read_page(table_id, leaf_page_num, (page_t*)&leaf);
+    buf_write_page(table_id, leaf_page_num, (page_t*)&leaf);
+    
+    lock_acquire(table_id, leaf_page_num, key, trx_id, 0);
+
+    printf("leaf_num_of_key: %d\n",leaf.num_of_keys);   
+    for(int i=0; i<leaf.num_of_keys; i++){
+        printf("db.key: %d\n", leaf.record[i].key);
+    }
+    printf("-----------------------\n");
+    
+    for(int i = 0; i<leaf.num_of_keys;i++){
+        if(leaf.record[i].key == key){
+            memcpy(ret_val, leaf.record[i].value, 112); // check problem
+            *val_size = leaf.record[i].size;
+            // printf("found key: %d\n",(int)key);
+            printf("-----------------------\n");
+            return 0;
+        }
+    }
+    return -1;  
+}
+```
+* Since, buffer, trx, lock have mutex, I don't have to add any mutex.
+* So, I just call lock_acquire after I get the pagenum of leaf_page_num
+
+# int db_update(int64_t table_id, int64_t key, char\* ret_val, uint16_t * val_size, int trx_id)
+```c
+int db_update(int64_t table_id , int64_t key, char* values , uint16_t new_val_size , uint16_t* old_val_size , int trx_id){
+    header_t header;   
+    internal_t node;
+    leaf_t leaf;
+    pagenum_t next_page_num, leaf_page_num;
+    
+    buf_read_page(table_id, 0, (page_t*)&header);
+    buf_write_page(table_id, 0, (page_t*)&header);
+    if(header.root_page_num == 0){
+        return -1;
+    }
+    
+    leaf_page_num = find_leaf(table_id, key, header.root_page_num);
+    buf_read_page(table_id, leaf_page_num, (page_t*)&leaf);
+    buf_write_page(table_id, leaf_page_num, (page_t*)&leaf);
+    
+    lock_acquire(table_id, leaf_page_num, key, trx_id, 1);
+
+
+    for(int i=0; i<leaf.num_of_keys; i++){
+        if(leaf.record[i].key == key){
+            memcpy(leaf.record[i].value, values, 112);
+        }
+    }
+    
+    buf_read_page(table_id, leaf_page_num, (page_t*)&leaf);
+    buf_write_page(table_id, leaf_page_num, (page_t*)&leaf);
+
+    return 0;
+}
+```
+* I write the value in parameter on leaf_record with matching keys
+
+# lock_t \* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_id, int lock_mode)
+```c
+lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_id, int lock_mode) {
+  pthread_mutex_lock(&lock_table_latch);
+
+  lock_t* lock = (lock_t*)malloc(sizeof(lock_t));
+  trx_t * trx;
+  hash_table_t* hash_table_entry = (hash_table_t*)malloc(sizeof(hash_table_t));
+  
+  trx->trx_id = trx_id;
+  lock->con = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
+
+  hash_table_entry->pair.table_id = table_id;
+  hash_table_entry->pair.page_id = page_id;
+
+  hash_table_t* find_result;
+  HASH_FIND(hh, hash_table, &hash_table_entry->pair, sizeof(pair_t), find_result);
+
+  if(find_result == NULL){ // // No table_id, page_id pair
+    // printf("acquire: 1\n");
+    hash_table_entry->head = (lock_t*)malloc(sizeof(lock_t));
+    hash_table_entry->tail = (lock_t*)malloc(sizeof(lock_t));
+
+    hash_table_entry->head->next = lock;
+    hash_table_entry->tail->prev = lock;
+
+    lock->prev = NULL;
+    lock->next = NULL;
+ 
+    lock->sentinel = hash_table_entry;
+
+    lock->record_id = key;
+    lock->lock_mode = lock_mode;
+    lock->lock_status = ACQUIRED;
+    lock->owner_trx_id = trx_id;
+
+
+    pthread_mutex_lock(&trx_table_latch);
+    
+    trx_t* trx_find_result;
+
+    HASH_FIND(hh, trx_table, &trx->trx_id, sizeof(int), trx_find_result);
+
+    lock->trx_next_lock = trx_find_result->next_lock;
+    trx_find_result->next_lock = lock;
+
+    pthread_mutex_unlock(&trx_table_latch);
+
+    HASH_ADD(hh, hash_table, pair ,sizeof(pair_t),hash_table_entry);
+
+    pthread_mutex_unlock(&lock_table_latch);
+
+    return lock;
+  }else{ // hash_table pair exists
+    hash_table_entry = find_result;
+
+    int x_lock_flag = 0; // check (same record_id, lock type X) 
+    lock_t * tmp_lock = NULL;
+    tmp_lock = find_result->head->next;
+    
+    // when given lock_mode is S-LOCk
+    if(lock_mode == 0){
+      // check where to put lock
+      while(tmp_lock != NULL){
+        if (tmp_lock->owner_trx_id == trx_id){
+          pthread_mutex_unlock(&lock_table_latch);
+          
+          return tmp_lock;
+        }else if(tmp_lock->record_id == key&&tmp_lock->lock_mode == 1){
+          x_lock_flag = 1;
+          break;
+        }
+        tmp_lock = tmp_lock->next; 
+      }
+      
+      if(x_lock_flag == 0){
+        lock->prev = hash_table_entry->tail->prev; // lock <- new lock
+        hash_table_entry->tail->prev->next = lock; // lock -> new lock
+        lock->next = NULL; // new lock -> NULL
+        hash_table_entry->tail->prev = lock; // new lock <- tail
+
+        lock->sentinel = hash_table_entry;
+
+        lock->record_id = key;
+        lock->lock_mode = lock_mode;
+        lock->owner_trx_id = trx_id;
+        lock->lock_status = ACQUIRED;
+
+        pthread_mutex_lock(&trx_table_latch);
+        
+        trx_t* trx_find_result;
+
+        HASH_FIND(hh, trx_table, &trx->trx_id, sizeof(int), trx_find_result);
+
+        lock->trx_next_lock = trx_find_result->next_lock;
+        trx_find_result->next_lock = lock;
+
+        pthread_mutex_unlock(&trx_table_latch);
+        pthread_mutex_unlock(&lock_table_latch);
+
+        return lock;
+      }else{ // x_lock_flag == 1
+        lock->prev = hash_table_entry->tail->prev; // lock <- new lock
+        hash_table_entry->tail->prev->next = lock; // lock -> new lock
+        lock->next = NULL; // new lock -> NULL
+        hash_table_entry->tail->prev = lock; // new lock <- tail
+
+        lock->sentinel = hash_table_entry;
+
+        lock->record_id = key;
+        lock->lock_mode = lock_mode;
+        lock->owner_trx_id = trx_id;
+        lock->lock_status = WAITING;
+
+        pthread_mutex_lock(&trx_table_latch);
+        
+        trx_t* trx_find_result;
+
+        HASH_FIND(hh, trx_table, &trx->trx_id, sizeof(int), trx_find_result);
+
+        lock->trx_next_lock = trx_find_result->next_lock;
+        trx_find_result->next_lock = lock;
+
+        pthread_mutex_unlock(&trx_table_latch);
+
+        pthread_cond_wait(&lock->con, &lock_table_latch);
+        
+        pthread_mutex_unlock(&lock_table_latch);
+
+        return lock;
+      }
+    }else if(lock_mode == 1){ // given lock is LOCK X
+      
+      int same_lock_flag = 0;
+      
+      while(tmp_lock != NULL){
+        //check with same trx_id
+        if(tmp_lock->owner_trx_id == trx_id && tmp_lock->lock_mode == 0){
+          tmp_lock->lock_mode == 1;
+          return tmp_lock;
+        }else if(tmp_lock->owner_trx_id == trx_id && tmp_lock->lock_mode == 1){
+          return  tmp_lock;
+        }
+
+        // same recorded lock
+        if (tmp_lock->record_id == key){
+          same_lock_flag = 1;
+        }
+        tmp_lock = tmp_lock->next; 
+      }
+
+      if(same_lock_flag == 1){
+        lock->prev = hash_table_entry->tail->prev; // lock <- new lock
+        hash_table_entry->tail->prev->next = lock; // lock -> new lock
+        lock->next = NULL; // new lock -> NULL
+        hash_table_entry->tail->prev = lock; // new lock <- tail
+
+        lock->sentinel = hash_table_entry;
+
+        lock->record_id = key;
+        lock->lock_mode = lock_mode;
+        lock->owner_trx_id = trx_id;
+        lock->lock_status = WAITING;
+
+        pthread_mutex_lock(&trx_table_latch);
+        
+        trx_t* trx_find_result;
+
+        HASH_FIND(hh, trx_table, &trx->trx_id, sizeof(int), trx_find_result);
+
+        lock->trx_next_lock = trx_find_result->next_lock;
+        trx_find_result->next_lock = lock;
+
+        pthread_mutex_unlock(&trx_table_latch);
+        pthread_cond_wait(&lock->con, &lock_table_latch);
+        
+        pthread_mutex_unlock(&lock_table_latch);
+
+        return lock;
+      }else{
+        lock->prev = hash_table_entry->tail->prev; // lock <- new lock
+        hash_table_entry->tail->prev->next = lock; // lock -> new lock
+        lock->next = NULL; // new lock -> NULL
+        hash_table_entry->tail->prev = lock; // new lock <- tail
+
+        lock->sentinel = hash_table_entry;
+
+        lock->record_id = key;
+        lock->lock_mode = lock_mode;
+        lock->owner_trx_id = trx_id;
+        lock->lock_status = ACQUIRED;
+
+        pthread_mutex_lock(&trx_table_latch);
+        
+        trx_t* trx_find_result;
+
+        HASH_FIND(hh, trx_table, &trx->trx_id, sizeof(int), trx_find_result);
+
+        lock->trx_next_lock = trx_find_result->next_lock;
+        trx_find_result->next_lock = lock;
+
+        pthread_mutex_unlock(&trx_table_latch);
+
+        pthread_mutex_unlock(&lock_table_latch);
+
+        return lock;
+      }
+    }
+  }
+}
+```
+
+# int lock_release(lock_t * lock_obj)
+```c
+int lock_release(lock_t* lock_obj){
+  pthread_mutex_lock(&lock_table_latch);
+  
+  lock_t*tmp_lock = NULL;
+  int first_lock_flag = -1;
+  int tmp_record = -1;
+
+  if(lock_obj->sentinel->head == NULL){
+    // printf("release: 1\n");
+    pthread_mutex_unlock(&lock_table_latch);
+    return -1;
+  }else if(lock_obj->sentinel->head->next == lock_obj->sentinel->tail->prev){
+    // printf("release: 2\n");
+    lock_obj->sentinel->head->next = NULL;
+    lock_obj->sentinel->tail->prev = NULL;
+
+    HASH_DEL(hash_table, lock_obj->sentinel);
+    
+    free(lock_obj->sentinel->head);
+    free(lock_obj->sentinel->tail);
+    free(lock_obj->sentinel);
+  }else{
+    tmp_lock = lock_obj;
+    lock_obj->prev->next = lock_obj->next;
+    lock_obj->next->prev = lock_obj->prev;
+    
+    while(tmp_lock != NULL){
+          if(tmp_lock->lock_status == WAITING && tmp_lock->lock_mode == 0){
+            tmp_lock->lock_status == ACQUIRED;
+
+            tmp_record = tmp_lock->record_id;
+
+            pthread_cond_signal(&(tmp_lock->con));
+            first_lock_flag = 0;
+          }else if(tmp_lock->lock_status == WAITING && tmp_lock->lock_mode == 1){
+            tmp_lock->lock_status == ACQUIRED;
+            pthread_cond_signal(&(tmp_lock->con));
+            
+            free(lock_obj);
+            pthread_mutex_unlock(&lock_table_latch);
+            return 0;
+          }
+
+          if(first_lock_flag == 0){
+            while(tmp_lock != NULL){
+              if(tmp_lock->lock_mode ==1 && tmp_lock->record_id == tmp_record){
+                break;
+              }else if(tmp_lock->lock_status == WAITING && tmp_lock->lock_mode == 0 && tmp_lock->record_id == tmp_record){
+                tmp_lock->lock_status = ACQUIRED;
+                pthread_cond_signal(&(tmp_lock->con));
+              }
+              tmp_lock = tmp_lock->next; 
+            }
+            break;
+          }
+      tmp_lock = tmp_lock->next; 
+    }
+  }
+  free(lock_obj);
+ 
+  pthread_mutex_unlock(&lock_table_latch);
+
+  return 0;
+}
+```
