@@ -1202,18 +1202,6 @@ My lock manager should provide:
 * There are some conditions these two lock has to keep. And with this condition, I made sequence.
 ![캡처](/uploads/c891547b5840e34ea20cc7f77d5c054c/캡처.PNG)
 
-# deadlock
-* 수업에서 들을 때는 구현할 수 있을 것이라고 생각했는데... 막상 직접 구현해보니 좀 많이 어렵다고 느꼈습니다.
-* deadlock이 발생하는 원인도 알고 있고 해결 방법도 알고 있는데, 제 코드구현 능력이 부족해서 시간이 더 필요할 것 같습니다.
-* Test server에서 segment fault가 계속 떠서 원인을 찾느라 현재 큰그림으로 생각중인 deadlock 코드를 테스트 못하였습니다.
-* Project6가 나온 시점에서 Project5를 구현하지 못하면 Project6 를 진행할 수 없다고 생각되서 제 능력 범위 내에서 최선을 다할 생각입니다.
-
-# abort and roll back
-* deadlock 부분이 구현이 되야지 어떤 부분에서 deadlock detection 을 해야될지 결정할 수 있을 것 같습니다.
-* 현재 생각 중인 그림은 deadlock detection 된 시점에서 타겟이 된 trx을 모두 abort하고 trx_hash_table에서 제거하는 것 입니다.
-* abort의 과정에서 기존에 백업해두었던 정보들을 다시 복구하고 buf write를 진행할 예정입니다.
-* 아마 lock_acquire 함수의 리턴값으로 abort인지 아닌지를 판단하게 될 것 같습니다.
-
 # Structure
 1. **int trx_begin(void)**
 2. **int trx_commit(int trx_id)**
